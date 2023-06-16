@@ -1,0 +1,54 @@
+version: "3"
+services:
+  db:
+    container_name: postgres
+    image: postgres:15.1-alpine
+    environment:
+      POSTGRES_DB: scheduler
+      POSTGRES_PASSWORD: 123456
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql-scripts:/docker-entrypoint-initdb.d/
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - net
+
+  backend:
+    container_name: scheduler-backend
+    image: danilaisaichev/scheduler-backend
+    restart: always
+    environment:
+      - "DB_HOSTNAME=database"
+    ports:
+      - "3535:3535"
+    depends_on:
+      - "db"
+    volumes:
+      - ./logs:/projects/scheduler-backend/logs
+    networks:
+      - net
+    links:
+      - "db:database"
+
+  frontend:
+    container_name: scheduler-frontend
+    image: danilaisaichev/scheduler-frontend
+    restart: always
+    environment:
+      - "BACKEND_PORT=3535"
+    ports:
+      - "80:80"
+    depends_on:
+      - "backend"
+    volumes:
+      - ./logs:/projects/scheduler-frontend/logs
+    networks:
+      - net
+    links:
+      - "backend:backend"
+
+networks:
+  net:
+    driver: bridge
